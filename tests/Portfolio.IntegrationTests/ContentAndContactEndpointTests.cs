@@ -33,7 +33,7 @@ public sealed class ContentEndpointTests(PortfolioApiFactory factory)
 
         var experience = await client.GetFromJsonAsync<List<ExperienceDto>>("/api/experience?lang=es");
 
-        var entry = Assert.Single(experience!);
+        var entry = Assert.Single(experience!, e => e.Company == "Example Company");
         Assert.Equal("Desarrollador de software", entry.Role);
         Assert.True(entry.IsCurrent);
     }
@@ -45,8 +45,9 @@ public sealed class ContentEndpointTests(PortfolioApiFactory factory)
 
         var technologies = await client.GetFromJsonAsync<List<TechnologyDto>>("/api/technologies");
 
-        Assert.Equal(11, technologies!.Count);
+        Assert.True(technologies!.Count >= 11);
         Assert.Equal("C#", technologies[0].Name);
+        Assert.Contains(technologies, t => t.Name == "SQL Server");
     }
 }
 

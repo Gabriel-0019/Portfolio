@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,14 @@ namespace Portfolio.IntegrationTests.Infrastructure;
 /// </summary>
 public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string AdminEmail = "admin@tests.localhost";
+
+    /// <summary>Generated per run; only exists in the throw-away test database.</summary>
+    public string AdminPassword { get; } = $"Test-{Guid.NewGuid():N}-Aa1!";
+
     private readonly string _databaseName = $"Portfolio_Tests_{Guid.NewGuid():N}";
+
+    public string UploadsPath { get; } = Path.Combine(Path.GetTempPath(), $"portfolio-uploads-{Guid.NewGuid():N}");
 
     private string ConnectionString =>
         $"Server=(localdb)\\MSSQLLocalDB;Database={_databaseName};Trusted_Connection=True;TrustServerCertificate=True";
@@ -23,6 +31,19 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
         builder.UseSetting("ConnectionStrings:Portfolio", ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("RateLimiting:Contact:PermitLimit", "1000");
+        builder.UseSetting("RateLimiting:Login:PermitLimit", "1000");
+        builder.UseSetting("Admin:Email", AdminEmail);
+        builder.UseSetting("Admin:Password", AdminPassword);
+        builder.UseSetting("Storage:RootPath", UploadsPath);
+    }
+
+    /// <summary>A client that keeps cookies and is already signed in as the admin.</summary>
+    public async Task<HttpClient> CreateAdminClientAsync()
+    {
+        var client = CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { email = AdminEmail, password = AdminPassword });
+        response.EnsureSuccessStatusCode();
+        return client;
     }
 
     /// <summary>Runs <paramref name="action"/> with a fresh DbContext scope.</summary>
@@ -43,6 +64,10 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
     {
         await WithDbAsync(db => db.Database.EnsureDeletedAsync());
         await DisposeAsync();
+        if (Directory.Exists(UploadsPath))
+        {
+            Directory.Delete(UploadsPath, recursive: true);
+        }
     }
 }
 

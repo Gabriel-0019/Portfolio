@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Domain.Contact;
 using Portfolio.Domain.Experiences;
@@ -7,7 +9,11 @@ using Portfolio.Domain.Technologies;
 
 namespace Portfolio.Infrastructure.Persistence;
 
-public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> options) : DbContext(options)
+/// <summary>
+/// Portfolio content plus ASP.NET Core Identity tables (AspNetUsers...) for the admin account.
+/// </summary>
+public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> options)
+    : IdentityDbContext<IdentityUser>(options)
 {
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectTranslation> ProjectTranslations => Set<ProjectTranslation>();
@@ -22,6 +28,7 @@ public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> opti
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PortfolioDbContext).Assembly);
     }
 }

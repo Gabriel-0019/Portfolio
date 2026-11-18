@@ -31,6 +31,33 @@ export const routes = [
     HydrateFallback: InitialLoading,
   },
   {
+    // Private admin panel (Spanish UI). Static segments rank above "/:lang".
+    path: '/admin',
+    loader: () => {
+      document.documentElement.lang = 'es'
+      return null
+    },
+    errorElement: <RouteError />,
+    HydrateFallback: InitialLoading,
+    children: [
+      { path: 'login', lazy: page(() => import('../admin/pages/LoginPage.jsx')) },
+      {
+        lazy: page(() => import('../admin/AdminLayout.jsx')),
+        children: [
+          { index: true, loader: () => redirect('/admin/projects') },
+          { path: 'projects', lazy: page(() => import('../admin/pages/ProjectsListPage.jsx')) },
+          { path: 'projects/new', lazy: page(() => import('../admin/pages/ProjectEditPage.jsx')) },
+          { path: 'projects/:id', lazy: page(() => import('../admin/pages/ProjectEditPage.jsx')) },
+          { path: 'technologies', lazy: page(() => import('../admin/pages/TechnologiesPage.jsx')) },
+          { path: 'experience', lazy: page(() => import('../admin/pages/ExperiencePage.jsx')) },
+          { path: 'profile', lazy: page(() => import('../admin/pages/ProfilePage.jsx')) },
+          { path: 'messages', lazy: page(() => import('../admin/pages/MessagesPage.jsx')) },
+          { path: '*', loader: () => redirect('/admin/projects') },
+        ],
+      },
+    ],
+  },
+  {
     path: '/:lang',
     loader: languageLoader,
     element: <RootLayout />,

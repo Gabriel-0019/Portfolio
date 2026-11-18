@@ -138,11 +138,12 @@ Se cargan automáticamente al aplicar migraciones (`UseSeeding` / `UseAsyncSeedi
 | 6 | Selector de idioma EN/ES, modo claro/oscuro, diseño responsive |
 | 7 | SEO: título y descripción por página, Open Graph para compartir en LinkedIn |
 
-### 5.2 Panel de administración (MVP)
-- Login de administrador.
-- CRUD de proyectos con edición lado a lado **EN / ES**, vista previa del Markdown, subida de imágenes, borrador/publicado, orden y destacados.
-- CRUD de tecnologías, experiencia y perfil.
-- Bandeja de mensajes de contacto.
+### 5.2 Panel de administración (implementado en fase 3)
+- Login de administrador (una sola cuenta) con opción "Mantener la sesión iniciada".
+- Proyectos: lista con estado y aviso si un publicado no es visible por falta de traducciones; editor con datos generales, contenido **EN / ES** lado a lado, vista previa del Markdown, portada y galería con subida de imágenes, selección de tecnologías por categoría, borrador/publicado/archivado, orden y destacados. El slug se sugiere a partir del título.
+- Tecnologías, experiencia (con descripción en Markdown) y perfil (foto, CV en PDF por idioma, redes).
+- Bandeja de mensajes: contador de no leídos, marcar leído/no leído, responder por correo, eliminar.
+- La interfaz del panel está en español (es privada); el contenido que se edita es bilingüe.
 
 ### 5.3 Fase 2 (ideas)
 - Integración con la API de GitHub (estrellas, lenguajes, último commit de cada repo).
@@ -183,11 +184,33 @@ GET    /api/experience?lang=                         Experiencia (más reciente 
 GET    /api/technologies                             Catálogo de tecnologías
 POST   /api/contact?lang=                            Formulario (202; 400 con errores; 429 si excede el límite)
 ```
-Pendientes (fase 3):
+Implementados (fase 3) — todo `/api/admin/*` requiere la cookie de sesión (401 sin ella):
 ```
-POST   /api/auth/login | /api/auth/logout
-/api/admin/...             (CRUD protegido)
+POST   /api/auth/login        Inicia sesión (200; 401 credenciales; 423 cuenta bloqueada; 429 límite)
+POST   /api/auth/logout       Cierra sesión
+GET    /api/auth/me           Usuario actual (401 si no hay sesión)
+GET|POST          /api/admin/projects          Lista (todos los estados) / crear
+GET|PUT|DELETE    /api/admin/projects/{id}     Detalle / guardar / eliminar
+GET|POST          /api/admin/technologies      Lista con nº de proyectos / crear
+PUT|DELETE        /api/admin/technologies/{id}
+GET|POST          /api/admin/experience
+PUT|DELETE        /api/admin/experience/{id}
+GET|PUT           /api/admin/profile           (PUT crea el perfil si no existe)
+GET               /api/admin/messages?unreadOnly=
+PATCH|DELETE      /api/admin/messages/{id}     { isRead }
+POST              /api/admin/uploads           multipart "file" → { url, contentType, size }
+GET               /uploads/{archivo}           Archivos subidos (públicos)
 ```
+
+**Seguridad del panel:**
+- ASP.NET Core Identity con una sola cuenta, creada al arrancar desde `Admin:Email` / `Admin:Password` si no existe. No hay registro público.
+- Cookie `portfolio.auth` **HttpOnly** + **SameSite=Strict** (el navegador no la envía desde otros sitios, lo que bloquea CSRF); 8 h con renovación deslizante.
+- Contraseña de 12+ caracteres; bloqueo de 15 min tras 5 intentos fallidos; límite de 10 intentos de login cada 5 min por IP.
+- Subidas: el tipo se decide por la firma del archivo (PNG, JPEG, GIF, WebP, PDF), nunca por el nombre; SVG/HTML rechazados; máx. 10 MB; nombres aleatorios; se sirven con `X-Content-Type-Options: nosniff`.
+- Las URLs guardadas solo pueden ser `http(s)://`, `mailto:` (redes) o `/uploads/…`; se rechaza `javascript:` y similares.
+- `?returnTo=` del login solo acepta rutas `/admin/…` (evita redirecciones abiertas).
+
+**Pendiente para producción (fase 5):** HTTPS obligatorio con cookie `Secure`, guardar la contraseña admin en secretos del hosting (no en appsettings), almacenamiento de archivos persistente (disco del servidor o blob) y limpieza de archivos subidos que ya no se usan.
 
 **Idioma de la API:** `?lang=es` → cabecera `Accept-Language` (acepta regionales como `es-MX`) → inglés por defecto. La respuesta incluye `Content-Language`.
 
@@ -249,7 +272,7 @@ En desarrollo, Vite hace de proxy de `/api` hacia la API .NET para evitar proble
 | **0. Preparación** ✅ | Inicializar git, solución .NET, app React, `.editorconfig`, `.gitignore`, README | Repo listo; API y React arrancan y se comunican (completada 2026-11-17) |
 | **1. Backend base** ✅ | Entidades, DbContext, migraciones en LocalDB, datos semilla, endpoints públicos, OpenAPI | API pública funcional con datos de ejemplo (completada 2026-11-17) |
 | **2. Frontend público** ✅ | Layout, i18n, tema, Inicio, Sobre mí, Proyectos, Detalle, Contacto | Sitio público navegable en EN/ES (completada 2026-11-17) |
-| **3. Admin** | Identity, login, CRUD de proyectos/experiencia/perfil, subida de imágenes, mensajes | Contenido editable sin tocar código |
+| **3. Admin** ✅ | Identity, login, CRUD de proyectos/experiencia/perfil, subida de imágenes, mensajes | Contenido editable sin tocar código (completada 2026-11-17) |
 | **4. Calidad** | Tests unitarios/integración/e2e, accesibilidad, rendimiento, SEO | Versión 1.0 lista para publicar |
 | **5. Publicación** | Elegir hosting, CI/CD, dominio, BD de producción | Sitio en línea |
 | **6. Primer proyecto** | Registrar el propio portafolio como caso de estudio; luego el siguiente proyecto | Galería con contenido real |

@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           changeOrigin: true,
         },
+        // Files uploaded from the admin panel are served by the API.
+        '/uploads': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
       },
     },
     test: {

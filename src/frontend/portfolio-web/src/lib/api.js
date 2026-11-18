@@ -20,14 +20,20 @@ function buildUrl(path, params) {
   return API_BASE_URL ? url.toString() : `${url.pathname}${url.search}`
 }
 
-async function request(path, { method = 'GET', params, body, signal } = {}) {
+export async function request(path, { method = 'GET', params, body, signal } = {}) {
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  const hasJsonBody = body !== undefined && !isForm
+
   const response = await fetch(buildUrl(path, params), {
     method,
     headers: {
       Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      // For FormData the browser sets multipart/form-data with its boundary.
+      ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: isForm ? body : hasJsonBody ? JSON.stringify(body) : undefined,
+    // Same-origin cookies carry the admin session.
+    credentials: 'same-origin',
     signal,
   })
 

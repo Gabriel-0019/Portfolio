@@ -1,14 +1,19 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Portfolio.Application.Admin.Content;
+using Portfolio.Application.Admin.Projects;
 using Portfolio.Application.Contact;
 using Portfolio.Application.Experiences;
 using Portfolio.Application.Profiles;
 using Portfolio.Application.Projects;
 using Portfolio.Application.Technologies;
+using Portfolio.Infrastructure.Admin;
 using Portfolio.Infrastructure.Persistence;
 using Portfolio.Infrastructure.Persistence.Seeding;
 using Portfolio.Infrastructure.Queries;
+using Portfolio.Infrastructure.Storage;
 
 namespace Portfolio.Infrastructure;
 
@@ -44,8 +49,30 @@ public static class DependencyInjection
         services.AddScoped<ITechnologyQueries, TechnologyQueries>();
         services.AddScoped<IContactMessageStore, ContactMessageStore>();
 
+        services.AddScoped<IAdminProjectService, AdminProjectService>();
+        services.AddScoped<IAdminTechnologyService, AdminTechnologyService>();
+        services.AddScoped<IAdminExperienceService, AdminExperienceService>();
+        services.AddScoped<IAdminProfileService, AdminProfileService>();
+        services.AddScoped<IAdminMessageService, AdminMessageService>();
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
+
         return services;
     }
+
+    /// <summary>
+    /// Identity stores for the single admin account. The API adds the sign-in manager and cookie.
+    /// </summary>
+    public static IdentityBuilder AddAdminIdentity(this IServiceCollection services) =>
+        services
+            .AddIdentityCore<IdentityUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 12;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddEntityFrameworkStores<PortfolioDbContext>();
 
     /// <summary>Applies pending migrations; EF Core then runs the seeding callbacks.</summary>
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)

@@ -86,6 +86,31 @@ Integration tests create a temporary `Portfolio_Tests_<guid>` LocalDB database a
 
 Language: `?lang=en|es`, otherwise the `Accept-Language` header, otherwise English.
 
+Admin endpoints live under `/api/admin/*` (projects, technologies, experience, profile, messages,
+uploads) and require the auth cookie from `POST /api/auth/login`. Full list in the API docs
+(`/scalar/v1`) and in [Docs/PLAN.md](Docs/PLAN.md).
+
+## Admin panel
+
+Open http://localhost:5173/admin. On startup the API creates the admin account from
+`Admin:Email` / `Admin:Password` if it does not exist yet (it never changes an existing account).
+
+- **Development:** a local-only account is configured in
+  `src/backend/Portfolio.Api/appsettings.Development.json`. It only works against your LocalDB.
+- **Your own credentials:** keep them out of the repo with user secrets, then delete the `Portfolio`
+  database's `AspNetUsers` row (or the whole local database) so the account is recreated:
+
+  ```bash
+  dotnet user-secrets set "Admin:Email" "you@example.com" --project src/backend/Portfolio.Api
+  ```
+
+  ```bash
+  dotnet user-secrets set "Admin:Password" "<a long password>" --project src/backend/Portfolio.Api
+  ```
+
+Uploaded files are stored in `src/backend/Portfolio.Api/App_Data/uploads` (git-ignored) and served
+at `/uploads/...`. Change it with `Storage:RootPath`.
+
 ## Tests and quality
 
 ```bash
