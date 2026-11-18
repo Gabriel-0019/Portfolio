@@ -1,0 +1,144 @@
+{
+  "common": {
+    "siteName": "Portfolio",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "errorTitle": "Something went wrong",
+    "errorBody": "We couldn't load this content. Please try again in a moment.",
+    "present": "Present",
+    "learnMore": "Learn more"
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "about": "About",
+    "contact": "Contact",
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mainNavigation": "Main navigation",
+    "language": "Language",
+    "switchLanguage": "Ver en español"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "home": {
+    "eyebrow": "Software Developer",
+    "greeting": "Hi, I'm {{name}}.",
+    "viewProjects": "View projects",
+    "contactMe": "Get in touch",
+    "featuredTitle": "Featured projects",
+    "featuredSubtitle": "A selection of work I'm proud of.",
+    "allProjects": "See all projects",
+    "aboutTitle": "About me",
+    "aboutCta": "More about me",
+    "stackTitle": "Technologies I work with",
+    "ctaTitle": "Let's build something together",
+    "ctaBody": "Have a project in mind or an opportunity to share? I'd love to hear from you."
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Case studies of the software I've designed and built.",
+    "filters": {
+      "label": "Filter projects",
+      "category": "Category",
+      "technology": "Technology",
+      "all": "All",
+      "allTechnologies": "All technologies",
+      "clear": "Clear filters"
+    },
+    "count_one": "{{count}} project",
+    "count_other": "{{count}} projects",
+    "emptyTitle": "Projects coming soon",
+    "emptyBody": "I'm working on new projects. Check back soon!",
+    "noResultsTitle": "No projects match these filters",
+    "noResultsBody": "Try another category or technology.",
+    "featured": "Featured",
+    "categories": {
+      "Web": "Web",
+      "Mobile": "Mobile",
+      "Backend": "Backend",
+      "Desktop": "Desktop",
+      "Data": "Data",
+      "Other": "Other"
+    }
+  },
+  "project": {
+    "back": "All projects",
+    "viewCaseStudy": "View case study",
+    "repo": "Source code",
+    "demo": "Live demo",
+    "technologies": "Technologies",
+    "category": "Category",
+    "period": "Period",
+    "gallery": "Gallery",
+    "notFoundTitle": "Project not found",
+    "notFoundBody": "The project you're looking for doesn't exist or isn't published yet."
+  },
+  "about": {
+    "title": "About me",
+    "subtitle": "My background, experience and the tools I use.",
+    "experience": "Experience",
+    "emptyExperience": "Experience will be added soon.",
+    "stack": "Tech stack",
+    "downloadCv": "Download CV",
+    "types": {
+      "Work": "Work",
+      "Education": "Education",
+      "Certification": "Certification"
+    },
+    "techCategories": {
+      "Language": "Languages",
+      "Frontend": "Frontend",
+      "Backend": "Backend",
+      "Database": "Databases",
+      "DevOps": "DevOps",
+      "Tool": "Tools"
+    }
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Send me a message and I'll get back to you as soon as possible.",
+    "directTitle": "Other ways to reach me",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "subject": "Subject",
+      "subjectOptional": "Subject (optional)",
+      "message": "Message",
+      "website": "Website"
+    },
+    "submit": "Send message",
+    "sending": "Sending…",
+    "sendAnother": "Send another message",
+    "successTitle": "Message sent",
+    "successBody": "Thanks for reaching out! I'll reply as soon as I can.",
+    "errors": {
+      "required": "This field is required.",
+      "email": "Enter a valid email address.",
+      "minLength": "Must be at least {{count}} characters.",
+      "maxLength": "Must be at most {{count}} characters.",
+      "rateLimited": "Too many messages sent. Please try again in a few minutes.",
+      "generic": "The message couldn't be sent. Please try again."
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist.",
+    "home": "Back to home"
+  },
+  "footer": {
+    "rights": "© {{year}} {{name}}. All rights reserved.",
+    "builtWith": "Built with .NET, React and SQL Server."
+  },
+  "seo": {
+    "homeDescription": "Portfolio of {{name}}, {{headline}}.",
+    "projectsDescription": "Software projects and case studies by {{name}}.",
+    "aboutDescription": "Experience, skills and background of {{name}}.",
+    "contactDescription": "Get in touch with {{name}}."
+  }
+}

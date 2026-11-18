@@ -1,0 +1,144 @@
+{
+  "common": {
+    "siteName": "Portafolio",
+    "loading": "Cargando…",
+    "retry": "Reintentar",
+    "errorTitle": "Algo salió mal",
+    "errorBody": "No pudimos cargar este contenido. Inténtalo de nuevo en un momento.",
+    "present": "Actualidad",
+    "learnMore": "Ver más"
+  },
+  "nav": {
+    "home": "Inicio",
+    "projects": "Proyectos",
+    "about": "Sobre mí",
+    "contact": "Contacto",
+    "skipToContent": "Saltar al contenido",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "mainNavigation": "Navegación principal",
+    "language": "Idioma",
+    "switchLanguage": "View in English"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "home": {
+    "eyebrow": "Desarrollador de software",
+    "greeting": "Hola, soy {{name}}.",
+    "viewProjects": "Ver proyectos",
+    "contactMe": "Contáctame",
+    "featuredTitle": "Proyectos destacados",
+    "featuredSubtitle": "Una selección de trabajos de los que me siento orgulloso.",
+    "allProjects": "Ver todos los proyectos",
+    "aboutTitle": "Sobre mí",
+    "aboutCta": "Conóceme más",
+    "stackTitle": "Tecnologías con las que trabajo",
+    "ctaTitle": "Construyamos algo juntos",
+    "ctaBody": "¿Tienes un proyecto en mente o una oportunidad que compartir? Me encantará saber de ti."
+  },
+  "projects": {
+    "title": "Proyectos",
+    "subtitle": "Casos de estudio del software que he diseñado y construido.",
+    "filters": {
+      "label": "Filtrar proyectos",
+      "category": "Categoría",
+      "technology": "Tecnología",
+      "all": "Todos",
+      "allTechnologies": "Todas las tecnologías",
+      "clear": "Quitar filtros"
+    },
+    "count_one": "{{count}} proyecto",
+    "count_other": "{{count}} proyectos",
+    "emptyTitle": "Próximamente nuevos proyectos",
+    "emptyBody": "Estoy trabajando en nuevos proyectos. ¡Vuelve pronto!",
+    "noResultsTitle": "Ningún proyecto coincide con estos filtros",
+    "noResultsBody": "Prueba con otra categoría o tecnología.",
+    "featured": "Destacado",
+    "categories": {
+      "Web": "Web",
+      "Mobile": "Móvil",
+      "Backend": "Backend",
+      "Desktop": "Escritorio",
+      "Data": "Datos",
+      "Other": "Otro"
+    }
+  },
+  "project": {
+    "back": "Todos los proyectos",
+    "viewCaseStudy": "Ver caso de estudio",
+    "repo": "Código fuente",
+    "demo": "Demo en vivo",
+    "technologies": "Tecnologías",
+    "category": "Categoría",
+    "period": "Periodo",
+    "gallery": "Galería",
+    "notFoundTitle": "Proyecto no encontrado",
+    "notFoundBody": "El proyecto que buscas no existe o todavía no está publicado."
+  },
+  "about": {
+    "title": "Sobre mí",
+    "subtitle": "Mi trayectoria, experiencia y las herramientas que uso.",
+    "experience": "Experiencia",
+    "emptyExperience": "Pronto agregaré mi experiencia.",
+    "stack": "Stack tecnológico",
+    "downloadCv": "Descargar CV",
+    "types": {
+      "Work": "Trabajo",
+      "Education": "Formación",
+      "Certification": "Certificación"
+    },
+    "techCategories": {
+      "Language": "Lenguajes",
+      "Frontend": "Frontend",
+      "Backend": "Backend",
+      "Database": "Bases de datos",
+      "DevOps": "DevOps",
+      "Tool": "Herramientas"
+    }
+  },
+  "contact": {
+    "title": "Contacto",
+    "subtitle": "Envíame un mensaje y te responderé lo antes posible.",
+    "directTitle": "Otras formas de contactarme",
+    "fields": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "subject": "Asunto",
+      "subjectOptional": "Asunto (opcional)",
+      "message": "Mensaje",
+      "website": "Sitio web"
+    },
+    "submit": "Enviar mensaje",
+    "sending": "Enviando…",
+    "sendAnother": "Enviar otro mensaje",
+    "successTitle": "Mensaje enviado",
+    "successBody": "¡Gracias por escribirme! Te responderé lo antes posible.",
+    "errors": {
+      "required": "Este campo es obligatorio.",
+      "email": "Ingresa un correo electrónico válido.",
+      "minLength": "Debe tener al menos {{count}} caracteres.",
+      "maxLength": "Debe tener como máximo {{count}} caracteres.",
+      "rateLimited": "Se enviaron demasiados mensajes. Inténtalo de nuevo en unos minutos.",
+      "generic": "No se pudo enviar el mensaje. Inténtalo de nuevo."
+    }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "body": "La página que buscas no existe.",
+    "home": "Volver al inicio"
+  },
+  "footer": {
+    "rights": "© {{year}} {{name}}. Todos los derechos reservados.",
+    "builtWith": "Hecho con .NET, React y SQL Server."
+  },
+  "seo": {
+    "homeDescription": "Portafolio de {{name}}, {{headline}}.",
+    "projectsDescription": "Proyectos de software y casos de estudio de {{name}}.",
+    "aboutDescription": "Experiencia, habilidades y trayectoria de {{name}}.",
+    "contactDescription": "Ponte en contacto con {{name}}."
+  }
+}
