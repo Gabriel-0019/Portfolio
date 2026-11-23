@@ -16,7 +16,7 @@ dotnet publish src/backend/Portfolio.Api -c Release -o publish
 `publish` ejecuta `npm ci` + `npm run build` del frontend y copia `dist/` a `publish/wwwroot/`
 (usa `-p:BuildFrontend=false` si `dist/` ya está compilado). El paquete:
 
-- Incluye `appsettings.json` y **excluye** `appsettings.Development.json` (LocalDB y cuenta admin local).
+- Incluye `appsettings.json` y **excluye** `appsettings.Development.json` (cuenta admin local de desarrollo).
 - Incluye `web.config` (por si el hosting usa IIS).
 - Es *framework-dependent*: el servidor necesita el runtime **ASP.NET Core 10**. Para un servidor Linux
   concreto se puede añadir `-r linux-x64 --self-contained false` y reducir el tamaño.
@@ -34,7 +34,8 @@ ASP.NET Core lee la configuración de variables de entorno usando `__` como sepa
 | Variable | Obligatoria | Ejemplo / valor | Para qué |
 |----------|:-----------:|-----------------|----------|
 | `ASPNETCORE_ENVIRONMENT` | ✅ | `Production` | Activa HSTS, redirección HTTPS, oculta la documentación de la API |
-| `ConnectionStrings__Portfolio` | ✅ | `Server=…;Database=Portfolio;User Id=…;Password=…;Encrypt=True` | Base de datos SQL Server |
+| `ConnectionStrings__Portfolio` | ✅ | `Host=ep-xxx-pooler.….neon.tech;Database=portfolio;Username=…;Password=…;SSL Mode=Require` | PostgreSQL. Con Neon: la cadena **con *pooling*** (`-pooler` en el host) |
+| `ConnectionStrings__PortfolioMigrations` | Con Neon | `Host=ep-xxx.….neon.tech;Database=portfolio;Username=…;Password=…;SSL Mode=Require` | Conexión **directa** (sin `-pooler`) solo para aplicar migraciones: el *pooler* de Neon (PgBouncer) no las soporta. Sin ella se usa `ConnectionStrings__Portfolio` |
 | `Database__MigrateOnStartup` | Recomendado | `true` | Aplica migraciones al arrancar (crea tablas y datos semilla la primera vez) |
 | `Admin__Email` | Primera vez | `tu@correo.com` | Crea la cuenta admin si no existe |
 | `Admin__Password` | Primera vez | contraseña larga (12+) | Igual. Puede quitarse después: nunca se modifica una cuenta existente |
@@ -68,19 +69,33 @@ ASP.NET Core lee la configuración de variables de entorno usando `__` como sepa
 Verificado localmente con el paquete publicado en modo `Production` (base de datos nueva): migraciones y
 datos semilla al arrancar, cuenta admin creada desde variables, páginas con metadatos, redirección por
 idioma, assets, health checks, y la **sesión del admin sigue válida tras reiniciar el proceso**
-(claves de Data Protection en SQL Server).
+(claves de Data Protection en la base de datos). Esa verificación se hizo con SQL Server; tras pasar a
+PostgreSQL, las mismas comprobaciones están cubiertas por las pruebas de integración y e2e contra PostgreSQL.
+
+### Base de datos en Neon
+
+1. En [console.neon.tech](https://console.neon.tech) crea un proyecto (región cercana a donde irá la API) con
+   la base `portfolio`. Usa la misma versión principal de PostgreSQL que en local (17).
+2. Copia las dos cadenas en formato .NET: con *pooling* → `ConnectionStrings__Portfolio`; directa →
+   `ConnectionStrings__PortfolioMigrations`. Ambas con `SSL Mode=Require`. **Solo en las variables del hosting.**
+3. Con `Database__MigrateOnStartup=true`, la API crea las tablas en el primer arranque.
+4. Para llevar tu contenido actual: ejecuta la herramienta de migración contra Neon desde tu equipo, con la
+   cadena **directa**, o haz `pg_dump` de tu base local y `pg_restore` en Neon.
+5. Plan gratuito: la base se suspende tras unos minutos sin uso y tarda un poco en despertar; la API
+   reintenta automáticamente los errores transitorios de conexión.
 
 ---
 
 ## 3. Opciones de hosting
 
-Las tres funcionan con el mismo paquete; cambia cómo se sube y dónde viven la base de datos y las subidas.
+Las tres funcionan con el mismo paquete; cambia cómo se sube y dónde viven las subidas. La base de datos es
+PostgreSQL en **Neon** (sección anterior) en cualquiera de ellas.
 
-### A. Azure App Service (Linux) + Azure SQL Database — la más integrada
+### A. Azure App Service (Linux) — la más integrada
 
 - **App Service** plan B1 (~13 USD/mes; el plan gratuito F1 no permite dominio propio con HTTPS).
   Runtime: .NET 10. Variables en *Configuración → Variables de entorno*.
-- **Azure SQL Database**: tiene una oferta gratuita (serverless) suficiente para un portafolio.
+- Base de datos: Neon, en una región de Azure cercana.
 - Subidas: `Storage__RootPath=/home/data/uploads` (`/home` es almacenamiento persistente en App Service Linux).
 - `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. *Health check path*: `/health/ready`.
 - Deploy desde GitHub Actions con `azure/webapps-deploy` usando el artefacto `portfolio-site`.
@@ -88,17 +103,17 @@ Las tres funcionan con el mismo paquete; cambia cómo se sube y dónde viven la 
 
 ### B. VPS Linux (Hetzner, DigitalOcean…, ~5–10 USD/mes)
 
-- Instalar el runtime ASP.NET Core 10, SQL Server 2022 para Linux (Express es gratis; necesita ≥2 GB RAM) o
-  usar una base de datos gestionada.
+- Instalar el runtime ASP.NET Core 10. Base de datos: Neon (o PostgreSQL en el propio servidor).
 - La app como servicio `systemd` escuchando en `127.0.0.1:8080`, detrás de **Caddy** (HTTPS automático con
   Let's Encrypt) o nginx. `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`.
 - Subidas en `/var/lib/portfolio/uploads`; copias de seguridad de esa carpeta y de la base de datos.
 - Deploy: copiar el artefacto por SSH (`rsync`) y reiniciar el servicio (automatizable desde GitHub Actions).
 - Alternativa: contenerizarlo con Docker (no incluido todavía; se agrega si se elige esta opción).
 
-### C. Hosting compartido Windows (IIS + SQL Server incluido)
+### C. Hosting compartido Windows (IIS)
 
-- El más barato; el paquete ya trae `web.config`. Requiere que el proveedor tenga **.NET 10**.
+- El más barato; el paquete ya trae `web.config`. Requiere que el proveedor tenga **.NET 10** y permita
+  conexiones salientes a Neon (puerto 5432).
 - Subir la carpeta por Web Deploy o FTP; variables desde su panel o en `web.config` (`<environmentVariables>`).
 - Subidas en una carpeta fuera de `wwwroot` con permisos de escritura para la app.
 - Menos automatizable y con límites de recursos; comprobar que soporten HTTPS con dominio propio.
@@ -117,18 +132,18 @@ git remote add origin https://github.com/<tu-usuario>/<tu-repo>.git
 git push -u origin main
 ```
 
-El primer push ejecuta el CI (pruebas .NET con SQL Server en contenedor, lint y pruebas del frontend,
+El primer push ejecuta el CI (pruebas .NET con PostgreSQL en contenedor, lint y pruebas del frontend,
 pruebas e2e y de accesibilidad con Chromium) y genera el paquete `portfolio-site`.
 
 > Antes de publicar el repositorio (si será público): `appsettings.Development.json` contiene una
-> contraseña **solo de desarrollo** para LocalDB. No da acceso a nada fuera de tu equipo, pero puedes
+> contraseña **solo de desarrollo** para la cuenta admin local. No da acceso a nada fuera de tu equipo, pero puedes
 > moverla a *user secrets* (ver README) si prefieres que no aparezca.
 
 ---
 
 ## 5. Checklist del primer despliegue
 
-1. Elegir hosting y crear la base de datos SQL Server.
+1. Elegir hosting y crear la base de datos en Neon (ver "Base de datos en Neon").
 2. Configurar las variables de la sección 2 (con `Admin__Email`/`Admin__Password` y `Database__MigrateOnStartup=true`).
 3. Desplegar el artefacto `portfolio-site`.
 4. Comprobar las URLs de la sección 2.

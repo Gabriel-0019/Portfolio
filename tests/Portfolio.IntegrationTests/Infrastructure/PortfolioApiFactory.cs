@@ -2,13 +2,15 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Portfolio.Infrastructure.Persistence;
 
 namespace Portfolio.IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Hosts the API against a throw-away SQL Server LocalDB database that is migrated and seeded
+/// Hosts the API against a throw-away PostgreSQL database that is migrated and seeded
 /// on startup and dropped when the test run finishes.
 /// </summary>
 public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -18,7 +20,7 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
     /// <summary>Generated per run; only exists in the throw-away test database.</summary>
     public string AdminPassword { get; } = $"Test-{Guid.NewGuid():N}-Aa1!";
 
-    private readonly string _databaseName = $"Portfolio_Tests_{Guid.NewGuid():N}";
+    private readonly string _databaseName = $"portfolio_tests_{Guid.NewGuid():N}";
 
     public string UploadsPath { get; } = Path.Combine(Path.GetTempPath(), $"portfolio-uploads-{Guid.NewGuid():N}");
 
@@ -28,15 +30,19 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
     public const string SpaInlineScript = "document.documentElement.dataset.boot = '1'";
 
     /// <summary>
-    /// SQL Server to create the test database on. Defaults to LocalDB; CI sets PORTFOLIO_TEST_SQL
-    /// (e.g. "Server=localhost,1433;User Id=sa;Password=…;TrustServerCertificate=True") for a SQL Server container.
+    /// PostgreSQL server to create the test database on: PORTFOLIO_TEST_PG (CI, a postgres container) or,
+    /// locally, the API's ConnectionStrings:Portfolio from user secrets (secrets.json). Only host, port and
+    /// credentials are reused; tests always work on their own database, never on the development one.
     /// </summary>
     private static string ServerConnection =>
-        Environment.GetEnvironmentVariable("PORTFOLIO_TEST_SQL") is { Length: > 0 } server
-            ? server.TrimEnd(';')
-            : "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+        Environment.GetEnvironmentVariable("PORTFOLIO_TEST_PG") is { Length: > 0 } fromEnvironment
+            ? fromEnvironment
+            : new ConfigurationBuilder().AddUserSecrets<Program>().Build().GetConnectionString("Portfolio")
+              ?? throw new InvalidOperationException(
+                  "No PostgreSQL for the tests: set ConnectionStrings:Portfolio in the API's user secrets or PORTFOLIO_TEST_PG.");
 
-    private string ConnectionString => $"{ServerConnection};Database={_databaseName}";
+    private string ConnectionString =>
+        new NpgsqlConnectionStringBuilder(ServerConnection) { Database = _databaseName }.ConnectionString;
 
     public PortfolioApiFactory()
     {

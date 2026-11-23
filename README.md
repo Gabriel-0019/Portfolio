@@ -7,19 +7,35 @@ Portafolio personal de desarrollador de software — bilingüe (inglés / españ
 |-------|-------|
 | Backend | .NET 10 · ASP.NET Core Web API · EF Core 10 · FluentValidation |
 | Frontend | React · JavaScript · Vite · Tailwind CSS |
-| Database | SQL Server (LocalDB in development) |
+| Database | PostgreSQL 17 (local in development; [Neon](https://neon.tech) planned for production) |
 
 See [Docs/PLAN.md](Docs/PLAN.md) for the full project plan and [Docs/DEPLOY.md](Docs/DEPLOY.md) for
 deployment (configuration, hosting options, first-deploy checklist).
 
-CI runs on GitHub Actions (`.github/workflows/ci.yml`): .NET tests against a SQL Server container,
+CI runs on GitHub Actions (`.github/workflows/ci.yml`): .NET tests against a PostgreSQL container,
 frontend lint/tests/build, Playwright end-to-end + accessibility tests, and the deployable package.
 
 ## Requirements
 
 - .NET SDK 10 (pinned in `global.json`)
 - Node.js 20.19+ / npm
-- SQL Server LocalDB (`(localdb)\MSSQLLocalDB`) — used by the API in development and by the integration tests
+- PostgreSQL 17 running locally, with a role that can create databases (the integration and e2e tests
+  create and drop their own):
+
+  ```bash
+  winget install --id PostgreSQL.PostgreSQL.17 -e
+  ```
+
+  ```sql
+  CREATE ROLE portfolio LOGIN PASSWORD '<password>' CREATEDB;
+  CREATE DATABASE portfolio OWNER portfolio;
+  ```
+
+- The connection string in the API's **user secrets** (`secrets.json`, outside the repository):
+
+  ```bash
+  dotnet user-secrets set "ConnectionStrings:Portfolio" "Host=localhost;Port=5432;Database=portfolio;Username=portfolio;Password=<password>" --project src/backend/Portfolio.Api
+  ```
 
 ## Getting started
 
@@ -59,8 +75,9 @@ in the URL language. Pages are code-split and loaded on first visit.
 ## Database
 
 In Development the API applies pending migrations on startup (`Database:MigrateOnStartup`) and
-seeds placeholder content when the tables are empty. The connection string lives in
-`src/backend/Portfolio.Api/appsettings.Development.json` (`ConnectionStrings:Portfolio`).
+seeds placeholder content when the tables are empty. The connection string comes from user secrets
+(`ConnectionStrings:Portfolio`, see Requirements) and is never stored in the repository. Technology names
+use a case-insensitive ICU collation, so `React` and `react` are the same technology.
 
 Add a migration after changing the model:
 
@@ -68,13 +85,26 @@ Add a migration after changing the model:
 dotnet ef migrations add <Name> -p src/backend/Portfolio.Infrastructure -s src/backend/Portfolio.Api -o Persistence/Migrations
 ```
 
-Apply migrations manually:
+Generating migrations needs no database or secret (a design-time factory is used). To apply them by hand,
+pass the connection explicitly (the API also applies them on startup in development):
 
 ```bash
-dotnet ef database update -p src/backend/Portfolio.Infrastructure -s src/backend/Portfolio.Api
+dotnet ef database update -p src/backend/Portfolio.Infrastructure -s src/backend/Portfolio.Api --connection "Host=localhost;Database=portfolio;Username=portfolio;Password=<password>"
 ```
 
-Integration tests create a temporary `Portfolio_Tests_<guid>` LocalDB database and drop it at the end.
+Integration tests create a temporary `portfolio_tests_<guid>` database on the same PostgreSQL server (from
+user secrets, or `PORTFOLIO_TEST_PG` in CI) and drop it at the end.
+
+### Moving data from the old SQL Server (LocalDB) database
+
+A one-off tool copies every table (content, admin account, messages) into PostgreSQL, keeping IDs and
+verifying row counts. LocalDB is only read:
+
+```bash
+dotnet run --project tools/Portfolio.DataMigration
+```
+
+Add `-- --replace` to wipe the PostgreSQL data first (for example, if the API already seeded sample content).
 
 ## API
 
@@ -100,7 +130,7 @@ Open http://localhost:5173/admin. On startup the API creates the admin account f
 `Admin:Email` / `Admin:Password` if it does not exist yet (it never changes an existing account).
 
 - **Development:** a local-only account is configured in
-  `src/backend/Portfolio.Api/appsettings.Development.json`. It only works against your LocalDB.
+  `src/backend/Portfolio.Api/appsettings.Development.json`. It only works against your local database.
 - **Your own credentials:** keep them out of the repo with user secrets, then delete the `Portfolio`
   database's `AspNetUsers` row (or the whole local database) so the account is recreated:
 
@@ -125,7 +155,7 @@ npm --prefix src/frontend/portfolio-web run format:check
 ```
 
 End-to-end and accessibility tests (Playwright + axe). They build the frontend, start the API serving it
-on port 5090 with a throw-away LocalDB database (dropped afterwards) and run in the Microsoft Edge
+on port 5090 with a throw-away PostgreSQL database (dropped afterwards with `psql`) and run in the Microsoft Edge
 installed on Windows — no browser download. Other browsers: set `E2E_BROWSER_CHANNEL` (e.g. `chrome`).
 
 ```bash

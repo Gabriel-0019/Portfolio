@@ -1,4 +1,4 @@
-# Continuous integration: .NET tests, frontend checks, end-to-end tests and the deployable package.
+# Continuous integration: .NET tests (PostgreSQL), frontend checks, end-to-end tests and the deployable package.
 # Provider-agnostic: deployment is added once the hosting is chosen (see Docs/DEPLOY.md).
 name: CI
 
@@ -19,23 +19,22 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   NODE_VERSION: '22'
-  # Throw-away SQL Server container that only lives for the job. Not a real secret.
-  CI_SQL: Server=localhost,1433;User Id=sa;Password=Ci-Only-Passw0rd!;TrustServerCertificate=True
+  # Throw-away PostgreSQL container that only lives for the job. Not a real secret.
+  CI_PG: Host=localhost;Port=5432;Username=postgres;Password=ci-only-password
 
 jobs:
   backend:
     name: .NET build and tests
     runs-on: ubuntu-latest
     services:
-      sql:
-        image: mcr.microsoft.com/mssql/server:2022-latest
+      postgres:
+        image: postgres:17
         env:
-          ACCEPT_EULA: 'Y'
-          MSSQL_SA_PASSWORD: Ci-Only-Passw0rd!
-        ports: ['1433:1433']
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ['5432:5432']
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci-Only-Passw0rd!' -Q 'SELECT 1' || exit 1"
-          --health-interval 10s --health-timeout 5s --health-retries 12
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -45,7 +44,7 @@ jobs:
       - run: dotnet build Portfolio.slnx -c Release --no-restore
       - run: dotnet test Portfolio.slnx -c Release --no-build
         env:
-          PORTFOLIO_TEST_SQL: ${{ env.CI_SQL }}
+          PORTFOLIO_TEST_PG: ${{ env.CI_PG }}
 
   frontend:
     name: Frontend lint, tests and build
@@ -71,15 +70,14 @@ jobs:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     services:
-      sql:
-        image: mcr.microsoft.com/mssql/server:2022-latest
+      postgres:
+        image: postgres:17
         env:
-          ACCEPT_EULA: 'Y'
-          MSSQL_SA_PASSWORD: Ci-Only-Passw0rd!
-        ports: ['1433:1433']
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ['5432:5432']
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci-Only-Passw0rd!' -Q 'SELECT 1' || exit 1"
-          --health-interval 10s --health-timeout 5s --health-retries 12
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     defaults:
       run:
         working-directory: src/frontend/portfolio-web
@@ -97,7 +95,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
         env:
-          E2E_SQL: ${{ env.CI_SQL }}
+          E2E_PG: ${{ env.CI_PG }}
           E2E_BROWSER_CHANNEL: chromium
       - uses: actions/upload-artifact@v4
         if: failure()

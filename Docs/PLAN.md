@@ -33,7 +33,7 @@ Crear un sitio web personal, **bilingüe (inglés / español)** y de **estilo pr
 | Estilo visual | Profesional, sobrio |
 | Backend | .NET 10 (ASP.NET Core Web API) |
 | Frontend | React + JavaScript + Vite |
-| Base de datos | SQL Server |
+| Base de datos | PostgreSQL 17 (local en desarrollo, Neon en producción). Hasta el 2026-11-23 fue SQL Server |
 | Publicación | Se decide más adelante |
 
 ---
@@ -42,18 +42,18 @@ Crear un sitio web personal, **bilingüe (inglés / español)** y de **estilo pr
 
 ```
 ┌──────────────────────────┐        HTTPS/JSON        ┌────────────────────────────┐       EF Core       ┌──────────────┐
-│  React SPA (Vite + JS)   │  ─────────────────────►  │  ASP.NET Core 10 Web API   │  ─────────────────► │  SQL Server  │
-│  Sitio público + Admin   │  ◄─────────────────────  │  /api/...                  │                     │  (LocalDB en │
-└──────────────────────────┘                          └────────────────────────────┘                     │   desarrollo)│
+│  React SPA (Vite + JS)   │  ─────────────────────►  │  ASP.NET Core 10 Web API   │  ─────────────────► │  PostgreSQL  │
+│  Sitio público + Admin   │  ◄─────────────────────  │  /api/...                  │                     │  (local /    │
+└──────────────────────────┘                          └────────────────────────────┘                     │   Neon)      │
                                                                                                          └──────────────┘
 ```
 
 ### ¿Por qué base de datos?
-Como los proyectos se agregarán con el tiempo, guardarlos en SQL Server y gestionarlos desde un **panel de administración** permite publicar un proyecto nuevo sin tocar código. Además, la BD guarda los mensajes del formulario de contacto. Esto también convierte al portafolio en una demostración full-stack (.NET + React + SQL Server).
+Como los proyectos se agregarán con el tiempo, guardarlos en la base de datos y gestionarlos desde un **panel de administración** permite publicar un proyecto nuevo sin tocar código. Además, la BD guarda los mensajes del formulario de contacto. Esto también convierte al portafolio en una demostración full-stack (.NET + React + PostgreSQL).
 
 ### Backend — .NET 10
 - **ASP.NET Core Web API** con controladores (o Minimal APIs agrupadas por módulo).
-- **Entity Framework Core 10** + proveedor SQL Server, migraciones code-first.
+- **Entity Framework Core 10** + proveedor **Npgsql** (PostgreSQL), migraciones code-first.
 - Arquitectura por capas:
   - `Portfolio.Domain` — entidades y reglas.
   - `Portfolio.Application` — casos de uso, DTOs, validaciones (FluentValidation).
@@ -79,9 +79,11 @@ Como los proyectos se agregarán con el tiempo, guardarlos en SQL Server y gesti
 - SEO: `<title>`, descripción, Open Graph y `hreflang` por página (React 19 los sube al `<head>`). En producción la API además los inserta en el HTML de cada página (sección 10.1), así que las vistas previas en LinkedIn/WhatsApp funcionan aunque esos bots no ejecuten JavaScript.
 - Tests: **Vitest** + React Testing Library (con la API simulada); **Playwright** para pruebas end-to-end (fase 4).
 
-### Base de datos — SQL Server
-- Desarrollo: **SQL Server LocalDB** (`(localdb)\MSSQLLocalDB`, ya instalado).
-- Producción: se decide junto con la publicación (Azure SQL, SQL Server en VPS, etc.).
+### Base de datos — PostgreSQL
+- Desarrollo: **PostgreSQL 17 local**; la cadena de conexión está en *user secrets* (`secrets.json`), nunca en el repositorio.
+- Producción: **Neon** (PostgreSQL gestionado): cadena con *pooling* para la API y cadena directa para migraciones (ver [DEPLOY.md](DEPLOY.md)).
+- Nombres de tecnologías con *collation* ICU sin distinción de mayúsculas (como hacía SQL Server).
+- Migración desde SQL Server (2026-11-23): migraciones regeneradas (`InitialPostgres`) y datos copiados con la herramienta `tools/Portfolio.DataMigration`.
 
 ---
 
@@ -119,7 +121,7 @@ Regla: un proyecto solo aparece en el sitio público si está **Published** y ti
 ### Datos semilla
 Se cargan automáticamente al aplicar migraciones (`UseSeeding` / `UseAsyncSeeding` de EF Core), **solo si la tabla está vacía**, así nunca sobrescriben contenido editado después:
 - Perfil de ejemplo ("Your Name", titular y bio en EN/ES, enlaces a GitHub, LinkedIn y email).
-- Catálogo de 11 tecnologías (C#, JavaScript, SQL, .NET, ASP.NET Core, EF Core, React, Vite, Tailwind CSS, SQL Server, Git).
+- Catálogo de 11 tecnologías (C#, JavaScript, SQL, .NET, ASP.NET Core, EF Core, React, Vite, Tailwind CSS, PostgreSQL, Git).
 - Una experiencia de ejemplo.
 - Este portafolio como primer proyecto (publicado y destacado, caso de estudio en EN/ES).
 
@@ -209,7 +211,7 @@ GET               /uploads/{archivo}           Archivos subidos (públicos)
 - Las URLs guardadas solo pueden ser `http(s)://`, `mailto:` (redes) o `/uploads/…`; se rechaza `javascript:` y similares.
 - `?returnTo=` del login solo acepta rutas `/admin/…` (evita redirecciones abiertas).
 
-**Producción (fase 5):** cookie `Secure` vía HTTPS + cabeceras reenviadas del proxy, contraseña admin desde variables de entorno del hosting, claves de Data Protection en SQL Server (la sesión sobrevive reinicios), carpeta de subidas persistente configurable con aviso si falta. Ver [DEPLOY.md](DEPLOY.md). Pendiente a futuro: limpieza de archivos subidos que ya no se usan.
+**Producción (fase 5):** cookie `Secure` vía HTTPS + cabeceras reenviadas del proxy, contraseña admin desde variables de entorno del hosting, claves de Data Protection en la base de datos (la sesión sobrevive reinicios), carpeta de subidas persistente configurable con aviso si falta. Ver [DEPLOY.md](DEPLOY.md). Pendiente a futuro: limpieza de archivos subidos que ya no se usan.
 
 **Idioma de la API:** `?lang=es` → cabecera `Accept-Language` (acepta regionales como `es-MX`) → inglés por defecto. La respuesta incluye `Content-Language`.
 
@@ -343,7 +345,7 @@ Mejoras posibles a futuro (rendimiento 90+ ya es bueno para un SPA): precargar e
 |-------------|--------|
 | .NET SDK 10.0.401 | Instalado |
 | Node.js 26 / npm 11 | Instalado |
-| SQL Server LocalDB (`MSSQLLocalDB`) | Instalado |
+| PostgreSQL 17 (`postgresql-x64-17`) | Instalado (2026-11-23); SQL Server LocalDB sigue instalado solo como origen de la migración |
 | sqlcmd | Instalado |
 | Git 2.55 | Instalado |
 | `dotnet-ef` 10.0.15 | Instalado como herramienta local (`dotnet tool restore`) |

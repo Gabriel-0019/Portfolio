@@ -133,7 +133,7 @@
   },
   "footer": {
     "rights": "© {{year}} {{name}}. All rights reserved.",
-    "builtWith": "Built with .NET, React and SQL Server."
+    "builtWith": "Built with .NET, React and PostgreSQL."
   },
   "seo": {
     "homeDescription": "Portfolio of {{name}}, {{headline}}.",

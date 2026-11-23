@@ -22,6 +22,12 @@ public static class DependencyInjection
 {
     public const string ConnectionStringName = "Portfolio";
 
+    /// <summary>
+    /// Optional direct (non-pooled) connection used only to apply migrations. Neon's pooled endpoint
+    /// (PgBouncer) cannot run migrations, so production sets both strings; locally only "Portfolio" is needed.
+    /// </summary>
+    public const string MigrationsConnectionStringName = "PortfolioMigrations";
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         // The connection string is resolved when the DbContext is created (not at registration),
@@ -29,19 +35,7 @@ public static class DependencyInjection
         services.AddDbContext<PortfolioDbContext>((serviceProvider, options) =>
         {
             var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            var connectionString = configuration.GetConnectionString(ConnectionStringName);
-
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException(
-                    $"Connection string '{ConnectionStringName}' is not configured. "
-                    + $"Set 'ConnectionStrings:{ConnectionStringName}' in appsettings or user secrets.");
-            }
-
-            options
-                .UseSqlServer(connectionString)
-                .UseSeeding((context, _) => PortfolioSeeder.Seed(context))
-                .UseAsyncSeeding((context, _, cancellationToken) => PortfolioSeeder.SeedAsync(context, cancellationToken));
+            ConfigurePostgres(options, RequireConnectionString(configuration, ConnectionStringName));
         });
 
         services.AddScoped<IProjectQueries, ProjectQueries>();
@@ -76,7 +70,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<PortfolioDbContext>();
 
     /// <summary>
-    /// Stores the keys that sign/encrypt the auth cookie in SQL Server. Without this, keys live in the
+    /// Stores the keys that sign/encrypt the auth cookie in the database. Without this, keys live in the
     /// container/app file system and every restart or redeploy would sign the admin out.
     /// </summary>
     public static IServiceCollection AddPersistentDataProtection(this IServiceCollection services)
@@ -88,11 +82,52 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>Applies pending migrations; EF Core then runs the seeding callbacks.</summary>
+    /// <summary>
+    /// Applies pending migrations; EF Core then runs the seeding callbacks. Uses "PortfolioMigrations"
+    /// (direct connection) when configured, otherwise the regular "Portfolio" connection.
+    /// </summary>
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
     {
-        await using var scope = services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<PortfolioDbContext>();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var migrationsConnection = configuration.GetConnectionString(MigrationsConnectionStringName);
+
+        if (string.IsNullOrWhiteSpace(migrationsConnection))
+        {
+            await using var scope = services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<PortfolioDbContext>().Database.MigrateAsync(cancellationToken);
+            return;
+        }
+
+        var options = new DbContextOptionsBuilder<PortfolioDbContext>();
+        ConfigurePostgres(options, migrationsConnection);
+        await using var db = new PortfolioDbContext(options.Options);
         await db.Database.MigrateAsync(cancellationToken);
+    }
+
+    /// <summary>PostgreSQL (Npgsql) with retries for transient failures (e.g. a Neon compute waking up).</summary>
+    public static void ConfigurePostgres(DbContextOptionsBuilder options, string connectionString, bool seed = true)
+    {
+        options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+
+        if (seed)
+        {
+            options
+                .UseSeeding((context, _) => PortfolioSeeder.Seed(context))
+                .UseAsyncSeeding((context, _, cancellationToken) => PortfolioSeeder.SeedAsync(context, cancellationToken));
+        }
+    }
+
+    private static string RequireConnectionString(IConfiguration configuration, string name)
+    {
+        var connectionString = configuration.GetConnectionString(name);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"Connection string '{name}' is not configured. "
+                + $"Set 'ConnectionStrings:{name}' in user secrets (development) or as the environment variable "
+                + $"'ConnectionStrings__{name}' (production).");
+        }
+
+        return connectionString;
     }
 }

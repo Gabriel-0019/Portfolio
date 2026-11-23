@@ -89,7 +89,7 @@ public static class PortfolioSeeder
                 ("React", "react", TechnologyCategory.Frontend),
                 ("Vite", "vite", TechnologyCategory.Frontend),
                 ("Tailwind CSS", "tailwindcss", TechnologyCategory.Frontend),
-                ("SQL Server", "microsoftsqlserver", TechnologyCategory.Database),
+                ("PostgreSQL", "postgresql", TechnologyCategory.Database),
                 ("Git", "git", TechnologyCategory.Tool),
             ];
 
@@ -159,7 +159,7 @@ public static class PortfolioSeeder
 
         public static Project PortfolioProject(IReadOnlyCollection<Technology> technologies, DateTimeOffset now)
         {
-            string[] stack = ["C#", ".NET", "ASP.NET Core", "Entity Framework Core", "SQL Server", "React", "JavaScript", "Vite", "Tailwind CSS"];
+            string[] stack = ["C#", ".NET", "ASP.NET Core", "Entity Framework Core", "PostgreSQL", "React", "JavaScript", "Vite", "Tailwind CSS"];
 
             return new Project
             {
@@ -178,17 +178,17 @@ public static class PortfolioSeeder
                     {
                         Language = Languages.English,
                         Title = "Developer Portfolio",
-                        Summary = "Bilingual portfolio built with .NET 10, React and SQL Server, with an admin panel to publish new projects without redeploying.",
+                        Summary = "Bilingual portfolio built with .NET 10, React and PostgreSQL, with an admin panel to publish new projects without redeploying.",
                         Content = """
                             ## Problem
                             I needed a place to showcase my projects in English and Spanish that I could keep up to date without touching code every time I finish something new.
 
                             ## Solution
-                            A React single-page app backed by an ASP.NET Core Web API. Content lives in SQL Server and is managed from an admin panel, so publishing a project is a form, not a deployment.
+                            A React single-page app backed by an ASP.NET Core Web API. Content lives in PostgreSQL and is managed from an admin panel, so publishing a project is a form, not a deployment.
 
                             ## Architecture
                             - **Backend:** .NET 10 Web API split into Domain, Application, Infrastructure and Api layers.
-                            - **Data:** Entity Framework Core with code-first migrations on SQL Server.
+                            - **Data:** Entity Framework Core with code-first migrations on PostgreSQL.
                             - **Frontend:** React + Vite + Tailwind CSS, with the language in the URL.
                             - **i18n:** every piece of content is stored per language; a project is only public when it exists in both.
 
@@ -203,17 +203,17 @@ public static class PortfolioSeeder
                     {
                         Language = Languages.Spanish,
                         Title = "Portafolio de desarrollador",
-                        Summary = "Portafolio bilingüe construido con .NET 10, React y SQL Server, con panel de administración para publicar proyectos sin volver a desplegar.",
+                        Summary = "Portafolio bilingüe construido con .NET 10, React y PostgreSQL, con panel de administración para publicar proyectos sin volver a desplegar.",
                         Content = """
                             ## Problema
                             Necesitaba un lugar para mostrar mis proyectos en inglés y español que pudiera mantener actualizado sin tocar código cada vez que termino algo nuevo.
 
                             ## Solución
-                            Una aplicación React de una sola página respaldada por una Web API de ASP.NET Core. El contenido vive en SQL Server y se gestiona desde un panel de administración, así que publicar un proyecto es llenar un formulario, no desplegar.
+                            Una aplicación React de una sola página respaldada por una Web API de ASP.NET Core. El contenido vive en PostgreSQL y se gestiona desde un panel de administración, así que publicar un proyecto es llenar un formulario, no desplegar.
 
                             ## Arquitectura
                             - **Backend:** Web API en .NET 10 dividida en capas Domain, Application, Infrastructure y Api.
-                            - **Datos:** Entity Framework Core con migraciones code-first sobre SQL Server.
+                            - **Datos:** Entity Framework Core con migraciones code-first sobre PostgreSQL.
                             - **Frontend:** React + Vite + Tailwind CSS, con el idioma en la URL.
                             - **i18n:** todo el contenido se guarda por idioma; un proyecto solo es público cuando existe en ambos.
 

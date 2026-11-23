@@ -65,7 +65,10 @@ internal sealed class TechnologyConfiguration : IEntityTypeConfiguration<Technol
 {
     public void Configure(EntityTypeBuilder<Technology> builder)
     {
-        builder.Property(t => t.Name).HasMaxLength(Technology.NameMaxLength).IsRequired();
+        builder.Property(t => t.Name)
+            .HasMaxLength(Technology.NameMaxLength)
+            .IsRequired()
+            .UseCollation(PortfolioDbContext.CaseInsensitiveCollation);
         builder.HasIndex(t => t.Name).IsUnique();
         builder.Property(t => t.IconKey).HasMaxLength(Technology.IconKeyMaxLength);
         builder.Property(t => t.Category).HasConversion<string>().HasMaxLength(20);

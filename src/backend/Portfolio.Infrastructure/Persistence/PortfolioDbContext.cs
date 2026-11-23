@@ -30,9 +30,17 @@ public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> opti
     public DbSet<ExperienceTranslation> ExperienceTranslations => Set<ExperienceTranslation>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
+    /// <summary>Case-insensitive, accent-sensitive ICU collation (see OnModelCreating).</summary>
+    public const string CaseInsensitiveCollation = "case_insensitive";
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // PostgreSQL compares text case-sensitively. This ICU collation makes selected columns behave like
+        // SQL Server's default: "React" == "react" in filters, duplicate checks and unique indexes.
+        modelBuilder.HasCollation(CaseInsensitiveCollation, locale: "und-u-ks-level2", provider: "icu", deterministic: false);
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PortfolioDbContext).Assembly);
     }
 }

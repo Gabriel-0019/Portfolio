@@ -47,7 +47,7 @@ public sealed class ContentEndpointTests(PortfolioApiFactory factory)
 
         Assert.True(technologies!.Count >= 11);
         Assert.Equal("C#", technologies[0].Name);
-        Assert.Contains(technologies, t => t.Name == "SQL Server");
+        Assert.Contains(technologies, t => t.Name == "PostgreSQL");
     }
 }
 

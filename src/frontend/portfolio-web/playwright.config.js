@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { serverConnectionString, withDatabase } from './e2e/database.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -10,7 +11,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 process.env.E2E_RUN_ID ??= Date.now().toString(36)
 process.env.E2E_ADMIN_EMAIL ??= 'admin@e2e.localhost'
 process.env.E2E_ADMIN_PASSWORD ??= `E2e-${randomBytes(12).toString('base64url')}-1a`
-process.env.E2E_DATABASE ??= `Portfolio_E2E_${process.env.E2E_RUN_ID}`
+process.env.E2E_DATABASE ??= `portfolio_e2e_${process.env.E2E_RUN_ID}`
 
 const port = Number(process.env.E2E_PORT ?? 5090)
 const baseURL = `http://127.0.0.1:${port}`
@@ -19,7 +20,7 @@ const channel = process.env.E2E_BROWSER_CHANNEL ?? 'msedge'
 
 /**
  * End-to-end tests against the production shape of the app: the ASP.NET Core API serving the
- * built React app (run `npm run e2e`, which builds first). Uses its own LocalDB database, dropped
+ * built React app (run `npm run e2e`, which builds first). Uses its own PostgreSQL database, dropped
  * afterwards, and the Microsoft Edge already installed on Windows (no browser download).
  */
 export default defineConfig({
@@ -59,11 +60,11 @@ export default defineConfig({
     env: {
       ASPNETCORE_ENVIRONMENT: 'E2E',
       ASPNETCORE_URLS: baseURL,
-      // E2E_SQL (CI) points at a SQL Server container; locally LocalDB is used and dropped afterwards.
-      ConnectionStrings__Portfolio: `${(
-        process.env.E2E_SQL ||
-        'Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True'
-      ).replace(/;$/, '')};Database=${process.env.E2E_DATABASE}`,
+      // E2E_PG (CI) or the API's user secrets locally; always a throw-away database for this run.
+      ConnectionStrings__Portfolio: withDatabase(
+        serverConnectionString(),
+        process.env.E2E_DATABASE,
+      ),
       Database__MigrateOnStartup: 'true',
       Admin__Email: process.env.E2E_ADMIN_EMAIL,
       Admin__Password: process.env.E2E_ADMIN_PASSWORD,
