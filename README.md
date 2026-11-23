@@ -9,7 +9,11 @@ Portafolio personal de desarrollador de software — bilingüe (inglés / españ
 | Frontend | React · JavaScript · Vite · Tailwind CSS |
 | Database | SQL Server (LocalDB in development) |
 
-See [Docs/PLAN.md](Docs/PLAN.md) for the full project plan.
+See [Docs/PLAN.md](Docs/PLAN.md) for the full project plan and [Docs/DEPLOY.md](Docs/DEPLOY.md) for
+deployment (configuration, hosting options, first-deploy checklist).
+
+CI runs on GitHub Actions (`.github/workflows/ci.yml`): .NET tests against a SQL Server container,
+frontend lint/tests/build, Playwright end-to-end + accessibility tests, and the deployable package.
 
 ## Requirements
 
@@ -119,6 +123,29 @@ npm --prefix src/frontend/portfolio-web test
 npm --prefix src/frontend/portfolio-web run lint
 npm --prefix src/frontend/portfolio-web run format:check
 ```
+
+End-to-end and accessibility tests (Playwright + axe). They build the frontend, start the API serving it
+on port 5090 with a throw-away LocalDB database (dropped afterwards) and run in the Microsoft Edge
+installed on Windows — no browser download. Other browsers: set `E2E_BROWSER_CHANNEL` (e.g. `chrome`).
+
+```bash
+npm --prefix src/frontend/portfolio-web run e2e
+```
+
+## Production build
+
+The API serves the built frontend, injecting per-page SEO / Open Graph tags, initial data, a strict CSP,
+`robots.txt` and `sitemap.xml` (details in [Docs/PLAN.md](Docs/PLAN.md), section 10.1).
+
+`dotnet publish` builds the React app and copies it into `wwwroot/`, producing one deployable folder
+(development settings are excluded):
+
+```bash
+dotnet publish src/backend/Portfolio.Api -c Release -o publish
+```
+
+Production settings (connection string, admin account, upload folder, domain…) come from environment
+variables — see the table in [Docs/DEPLOY.md](Docs/DEPLOY.md). Health checks: `/health/live`, `/health/ready`.
 
 ## Repository layout
 

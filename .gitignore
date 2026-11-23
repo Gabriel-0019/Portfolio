@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Uploaded files (local storage)
 **/App_Data/
+
+# Separate build outputs (e2e runs, checks)
+artifacts/

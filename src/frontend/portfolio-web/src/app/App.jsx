@@ -5,8 +5,8 @@ import { createQueryClient } from './queryClient.js'
 import { routes } from './routes.jsx'
 import ThemeProvider from './ThemeProvider.jsx'
 
-export default function App() {
-  const [queryClient] = useState(createQueryClient)
+export default function App({ initialData = null }) {
+  const [queryClient] = useState(() => createQueryClient(initialData))
   const [router] = useState(() => createBrowserRouter(routes))
 
   return (

@@ -86,6 +86,13 @@ internal sealed class ProjectQueries(PortfolioDbContext db) : IProjectQueries
                 .ToList());
     }
 
+    public async Task<IReadOnlyList<PublishedProjectRef>> GetPublishedRefsAsync(CancellationToken cancellationToken) =>
+        await PubliclyVisible()
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.Slug)
+            .Select(p => new PublishedProjectRef(p.Slug, p.UpdatedAt))
+            .ToListAsync(cancellationToken);
+
     /// <summary>Published projects translated into every supported language.</summary>
     private IQueryable<Project> PubliclyVisible()
     {

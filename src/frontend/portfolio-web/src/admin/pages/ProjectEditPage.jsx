@@ -82,7 +82,7 @@ function ProjectForm({ project, technologies }) {
   const isNew = !project
   const [saved, setSaved] = useState(Boolean(location.state?.created))
 
-  const { register, control, handleSubmit, setValue, getValues, reset } = useForm({
+  const { register, control, handleSubmit, reset } = useForm({
     defaultValues: project ? projectToForm(project) : EMPTY_PROJECT_FORM,
   })
   const images = useFieldArray({ control, name: 'images' })
@@ -108,15 +108,12 @@ function ProjectForm({ project, technologies }) {
   const status = useWatch({ control, name: 'status' })
   const translations = useWatch({ control, name: 'translations' })
 
-  function suggestSlug() {
-    if (getValues('slug')) return
-    const title = getValues('translations.en.title') || getValues('translations.es.title')
-    if (title) setValue('slug', slugify(title), { shouldDirty: true })
-  }
+  // Shown as the slug placeholder and used when the field is left empty.
+  const suggestedSlug = slugify(translations.en?.title || translations.es?.title || '')
 
   function onSubmit(values) {
     setSaved(false)
-    save.mutate(formToRequest(values))
+    save.mutate(formToRequest({ ...values, slug: values.slug.trim() || suggestedSlug }))
   }
 
   const title = isNew
@@ -178,10 +175,15 @@ function ProjectForm({ project, technologies }) {
           <Field
             id="slug"
             label="Slug (URL)"
-            hint="Minúsculas y guiones, p. ej. mi-proyecto."
+            hint="Minúsculas y guiones. Si lo dejas vacío se usa el sugerido a partir del título."
             className="sm:col-span-2"
           >
-            <input id="slug" className={inputClasses} {...register('slug')} onFocus={suggestSlug} />
+            <input
+              id="slug"
+              className={inputClasses}
+              placeholder={suggestedSlug || 'mi-proyecto'}
+              {...register('slug')}
+            />
           </Field>
           <Field id="category" label="Categoría">
             <select id="category" className={inputClasses} {...register('category')}>

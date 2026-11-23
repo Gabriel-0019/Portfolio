@@ -1,9 +1,12 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.ResponseCompression;
 using Portfolio.Api.Controllers;
+using Portfolio.Api.Hosting;
 using Portfolio.Api.Localization;
 using Portfolio.Application;
 using Portfolio.Infrastructure;
@@ -26,12 +29,15 @@ builder.Services.AddPortfolioLocalization();
 // ---------- Admin authentication (ASP.NET Core Identity + HttpOnly cookie) ----------
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 builder.Services.AddAdminIdentity().AddSignInManager();
+builder.Services.AddPersistentDataProtection();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "portfolio.auth";
     options.Cookie.HttpOnly = true;
     // Strict: the cookie is never sent on cross-site requests, which blocks CSRF against the admin API.
     options.Cookie.SameSite = SameSiteMode.Strict;
+    // Secure whenever the request is HTTPS. Behind a TLS-terminating proxy (App Service, Caddy, nginx)
+    // set ASPNETCORE_FORWARDEDHEADERS_ENABLED=true so the app sees the original https scheme.
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
@@ -86,6 +92,22 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+// ---------- Health checks: /health/live (process up) and /health/ready (database reachable) ----------
+builder.Services
+    .AddHealthChecks()
+    .AddDbContextCheck<Portfolio.Infrastructure.Persistence.PortfolioDbContext>("database", tags: ["ready"]);
+
+// ---------- Hosting the built frontend + response compression ----------
+builder.Services.AddSpaHosting(builder.Configuration, builder.Environment);
+// "Optimal" instead of the default "Fastest": noticeably smaller JS/CSS for a small CPU cost on a low-traffic site.
+builder.Services.Configure<BrotliCompressionProviderOptions>(o => o.Level = System.IO.Compression.CompressionLevel.Optimal);
+builder.Services.Configure<GzipCompressionProviderOptions>(o => o.Level = System.IO.Compression.CompressionLevel.Optimal);
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml", "application/xml"]);
+});
+
 var app = builder.Build();
 
 if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
@@ -96,6 +118,8 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseSecurityHeaders();
+app.UseResponseCompression();
 
 if (app.Environment.IsDevelopment())
 {
@@ -104,8 +128,25 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
+    app.UseHsts();
     app.UseHttpsRedirection();
+
+    // Files inside the app folder are wiped by every redeploy.
+    if (string.IsNullOrWhiteSpace(app.Configuration["Storage:RootPath"]))
+    {
+        app.Logger.LogWarning(
+            "Storage:RootPath is not set: uploads go to {Path}, inside the application folder, and will be lost on redeploy. "
+            + "Point it to persistent storage.",
+            app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value.RootPath);
+    }
+
+    if (app.Services.GetRequiredService<SpaIndexHolder>().Value is null)
+    {
+        app.Logger.LogWarning("The frontend was not found (Spa:RootPath / wwwroot). Only the API will be served.");
+    }
 }
+
+app.UseSpaStaticFiles();
 
 var storage = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
 Directory.CreateDirectory(storage.RootPath);
@@ -127,6 +168,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+app.MapSpa();
 
 app.Run();
 

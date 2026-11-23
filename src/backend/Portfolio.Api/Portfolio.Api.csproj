@@ -7,7 +7,14 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
     <UserSecretsId>portfolio-api-6f2a1c4e</UserSecretsId>
+    <!-- Only ship framework/library translations the site actually uses. -->
+    <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Development settings (LocalDB, local admin account) must never reach a server. -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
@@ -15,6 +22,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
     <PackageReference Include="Scalar.AspNetCore" Version="3.0.1" />
   </ItemGroup>
 
@@ -22,5 +30,32 @@
     <ProjectReference Include="..\Portfolio.Application\Portfolio.Application.csproj" />
     <ProjectReference Include="..\Portfolio.Infrastructure\Portfolio.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!--
+    `dotnet publish` produces a single deployable folder: it builds the React app and copies dist/ into
+    wwwroot/, which the API serves (see Hosting/SpaHosting.cs).
+    Pass -p:BuildFrontend=false to reuse an existing dist/ (e.g. when CI already built it).
+  -->
+  <PropertyGroup>
+    <FrontendRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\frontend\portfolio-web\'))</FrontendRoot>
+    <BuildFrontend Condition="'$(BuildFrontend)' == ''">true</BuildFrontend>
+  </PropertyGroup>
+
+  <Target Name="BuildFrontendForPublish" BeforeTargets="ComputeFilesToPublish" Condition="'$(BuildFrontend)' == 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(FrontendRoot)" />
+    <Exec Command="npm run build" WorkingDirectory="$(FrontendRoot)" />
+  </Target>
+
+  <Target Name="IncludeFrontendInPublish" AfterTargets="ComputeFilesToPublish">
+    <Error Condition="!Exists('$(FrontendRoot)dist\index.html')" Text="The frontend is not built: $(FrontendRoot)dist\index.html is missing." />
+    <ItemGroup>
+      <FrontendDistFiles Include="$(FrontendRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(FrontendDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
 </Project>

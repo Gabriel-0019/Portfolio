@@ -46,7 +46,7 @@ describe('routing and pages', () => {
     renderApp('/en/projects')
 
     const group = await screen.findAllByRole('group', { name: 'Language' })
-    expect(within(group[0]).getByRole('link', { name: 'Español' })).toHaveAttribute(
+    expect(within(group[0]).getByRole('link', { name: /^ES\s*Español$/ })).toHaveAttribute(
       'href',
       '/es/projects',
     )

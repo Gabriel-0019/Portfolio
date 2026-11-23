@@ -28,7 +28,6 @@ export default function LanguageSwitcher() {
             lang={code}
             hrefLang={code}
             aria-current={active ? 'true' : undefined}
-            aria-label={name}
             onClick={() => rememberLanguage(code)}
             preventScrollReset
             className={[
@@ -38,7 +37,9 @@ export default function LanguageSwitcher() {
                 : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
             ].join(' ')}
           >
+            {/* Accessible name "EN English" keeps the visible text first (WCAG 2.5.3 Label in Name). */}
             {label}
+            <span className="sr-only"> {name}</span>
           </Link>
         )
       })}

@@ -80,7 +80,9 @@ export default function ProjectCard({ project, headingLevel = 'h3' }) {
 
         <div className="flex items-end justify-between gap-3">
           <TechBadgeList technologies={project.technologies.slice(0, MAX_BADGES)} />
-          {extra > 0 && <span className="shrink-0 text-xs text-slate-500">+{extra}</span>}
+          {extra > 0 && (
+            <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">+{extra}</span>
+          )}
         </div>
 
         <span className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400">

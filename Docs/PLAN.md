@@ -76,7 +76,7 @@ Como los proyectos se agregarán con el tiempo, guardarlos en SQL Server y gesti
 - **react-markdown** para casos de estudio y bio (no renderiza HTML crudo), **lucide-react** para íconos, fuente **Inter**.
 - Idioma en la URL (`/en/...`, `/es/...`): `/` y rutas sin prefijo redirigen al idioma guardado o al del navegador. El selector mantiene la página actual.
 - Modo claro / oscuro / sistema, guardado en el navegador y aplicado antes del primer pintado (sin parpadeo).
-- SEO: `<title>`, descripción, Open Graph y `hreflang` por página (React 19 los sube al `<head>`). Las vistas previas al compartir en redes necesitarán prerenderizado (fase 4), porque esos bots no ejecutan JavaScript.
+- SEO: `<title>`, descripción, Open Graph y `hreflang` por página (React 19 los sube al `<head>`). En producción la API además los inserta en el HTML de cada página (sección 10.1), así que las vistas previas en LinkedIn/WhatsApp funcionan aunque esos bots no ejecuten JavaScript.
 - Tests: **Vitest** + React Testing Library (con la API simulada); **Playwright** para pruebas end-to-end (fase 4).
 
 ### Base de datos — SQL Server
@@ -149,7 +149,6 @@ Se cargan automáticamente al aplicar migraciones (`UseSeeding` / `UseAsyncSeedi
 - Integración con la API de GitHub (estrellas, lenguajes, último commit de cada repo).
 - Blog / notas técnicas bilingües.
 - Analítica respetuosa con la privacidad.
-- Prerenderizado de páginas públicas para mejor SEO.
 - Paleta de comandos (Ctrl+K).
 
 ---
@@ -210,7 +209,7 @@ GET               /uploads/{archivo}           Archivos subidos (públicos)
 - Las URLs guardadas solo pueden ser `http(s)://`, `mailto:` (redes) o `/uploads/…`; se rechaza `javascript:` y similares.
 - `?returnTo=` del login solo acepta rutas `/admin/…` (evita redirecciones abiertas).
 
-**Pendiente para producción (fase 5):** HTTPS obligatorio con cookie `Secure`, guardar la contraseña admin en secretos del hosting (no en appsettings), almacenamiento de archivos persistente (disco del servidor o blob) y limpieza de archivos subidos que ya no se usan.
+**Producción (fase 5):** cookie `Secure` vía HTTPS + cabeceras reenviadas del proxy, contraseña admin desde variables de entorno del hosting, claves de Data Protection en SQL Server (la sesión sobrevive reinicios), carpeta de subidas persistente configurable con aviso si falta. Ver [DEPLOY.md](DEPLOY.md). Pendiente a futuro: limpieza de archivos subidos que ya no se usan.
 
 **Idioma de la API:** `?lang=es` → cabecera `Accept-Language` (acepta regionales como `es-MX`) → inglés por defecto. La respuesta incluye `Content-Language`.
 
@@ -241,12 +240,14 @@ Portfolio/
 │           │   ├── components/    # layout (Header, Footer...) y ui compartida
 │           │   ├── i18n/          # configuración + locales/en.json, es.json
 │           │   ├── lib/           # cliente API, hooks de consultas, formato
+│           │   ├── admin/         # panel de administración
 │           │   └── test/          # setup y utilidades de pruebas
+│           ├── e2e/               # Playwright (e2e + accesibilidad con axe)
+│           ├── playwright.config.js
 │           └── package.json
 ├── tests/
 │   ├── Portfolio.UnitTests/
-│   ├── Portfolio.IntegrationTests/
-│   └── e2e/                       # Playwright
+│   └── Portfolio.IntegrationTests/
 ├── .editorconfig
 ├── .gitignore
 └── README.md
@@ -273,8 +274,8 @@ En desarrollo, Vite hace de proxy de `/api` hacia la API .NET para evitar proble
 | **1. Backend base** ✅ | Entidades, DbContext, migraciones en LocalDB, datos semilla, endpoints públicos, OpenAPI | API pública funcional con datos de ejemplo (completada 2026-11-17) |
 | **2. Frontend público** ✅ | Layout, i18n, tema, Inicio, Sobre mí, Proyectos, Detalle, Contacto | Sitio público navegable en EN/ES (completada 2026-11-17) |
 | **3. Admin** ✅ | Identity, login, CRUD de proyectos/experiencia/perfil, subida de imágenes, mensajes | Contenido editable sin tocar código (completada 2026-11-17) |
-| **4. Calidad** | Tests unitarios/integración/e2e, accesibilidad, rendimiento, SEO | Versión 1.0 lista para publicar |
-| **5. Publicación** | Elegir hosting, CI/CD, dominio, BD de producción | Sitio en línea |
+| **4. Calidad** ✅ | Tests unitarios/integración/e2e, accesibilidad, rendimiento, SEO | Versión 1.0 lista para publicar (completada 2026-11-17) |
+| **5. Publicación** 🟡 | Elegir hosting, CI/CD, dominio, BD de producción | **Preparación completada (2026-11-17):** paquete único, configuración por variables, health checks, CI en GitHub Actions, guía [DEPLOY.md](DEPLOY.md). **Pendiente:** elegir hosting/dominio, crear el repo en GitHub y el paso de deploy |
 | **6. Primer proyecto** | Registrar el propio portafolio como caso de estudio; luego el siguiente proyecto | Galería con contenido real |
 
 ---
@@ -287,6 +288,36 @@ En desarrollo, Vite hace de proxy de `/api` hacia la API .NET para evitar proble
 - Validación en cliente y servidor; errores de la API con formato `ProblemDetails`.
 - Secretos fuera del repositorio (User Secrets en desarrollo).
 
+### 10.1 Producción: un solo despliegue (fase 4)
+
+La API sirve el frontend compilado (`dist/`, por defecto desde `wwwroot`, configurable con `Spa:RootPath`):
+
+- **Assets** de `/assets/*` con caché de 1 año (`immutable`, llevan hash en el nombre); HTML con `no-cache`.
+- **Cada página** se responde con `index.html` más, en el marcador `<!--app-head-->`:
+  - `<title>`, descripción, `canonical`, `hreflang` (en/es/x-default), Open Graph y Twitter Card en el idioma de la URL (`og:image` = portada del proyecto o foto del perfil).
+  - Un bloque JSON (`type="application/json"`) con los datos de la primera vista (perfil, proyectos destacados, proyecto…). React los usa directamente sin llamar a la API → sin saltos de diseño.
+  - `<html lang>` correcto y **código 404 real** para proyectos/páginas que no existen (con `noindex`).
+  - El cliente borra esas etiquetas al arrancar (`data-ssr`) y gestiona las suyas, sin duplicados.
+- `/` y rutas sin idioma → **redirección 302** al idioma del visitante (`Accept-Language`).
+- `/robots.txt` (bloquea `/admin` y `/api/`) y `/sitemap.xml` dinámico con todas las páginas en ambos idiomas y sus alternativas.
+- **Cabeceras de seguridad** en todas las respuestas (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, COOP) y **CSP estricta** en el HTML: `script-src 'self'` + hash SHA-256 del script de tema calculado al arrancar (sin `unsafe-inline`), `style-src 'self'`, `frame-ancestors 'none'`.
+- HSTS + redirección a HTTPS fuera de desarrollo; compresión Brotli/Gzip.
+- `Site:BaseUrl` fija el dominio de las URLs canónicas (si no, se usa el de la petición).
+
+### 10.2 Resultados de calidad (2026-11-17)
+
+| Verificación | Resultado |
+|--------------|-----------|
+| Pruebas .NET (xUnit) | 38 unitarias + 71 de integración ✅ |
+| Pruebas frontend (Vitest) | 38 ✅ |
+| E2E (Playwright, Edge, escritorio + móvil Pixel 7) | 51 ✅ (5 omitidas a propósito: panel admin en móvil) |
+| Accesibilidad (axe, WCAG 2.2 AA, claro y oscuro) | 0 violaciones en páginas públicas y panel |
+| Lighthouse (móvil simulado, producción local) | Rendimiento 90–94 · Accesibilidad 100 · Buenas prácticas 100 · SEO 100 · CLS ≤ 0,03 |
+
+Hallazgos corregidos en esta fase: nombre accesible del selector EN/ES (WCAG 2.5.3), contraste del contador "+N" en modo oscuro, el slug del editor se mezclaba con el texto sugerido al escribir, y el salto de diseño del hero al cargar el perfil (CLS 0,137 → 0).
+
+Mejoras posibles a futuro (rendimiento 90+ ya es bueno para un SPA): precargar el chunk de la página actual desde el servidor (`modulepreload` con el manifest de Vite) o renderizado completo en servidor.
+
 ---
 
 ## 11. Decisiones
@@ -294,11 +325,13 @@ En desarrollo, Vite hace de proxy de `/api` hacia la API .NET para evitar proble
 **Tomadas (2026-11-17)**
 - Panel de administración incluido en el MVP.
 - Datos personales: textos de ejemplo por ahora, se reemplazan desde el panel admin.
-- Control de versiones: repositorio git local (rama `main`); subir a GitHub se decide después.
+- Control de versiones: repositorio git local (rama `main`); el usuario creará el repositorio en GitHub (CI ya preparado).
+- Publicación: preparar todo lo independiente del proveedor; hosting y dominio se eligen más adelante.
 
 **Pendientes**
-- **Correo**: ¿el formulario solo guarda en BD o también envía un email de aviso? (Puede quedar para la fase de publicación.)
-- **Hosting y BD de producción**: se decide en la fase 5.
+- **Hosting y BD de producción**: opciones comparadas en [DEPLOY.md](DEPLOY.md) (Azure, VPS, hosting compartido).
+- **Dominio**: todavía no hay; se configura con `Site__BaseUrl`.
+- **Correo**: ¿el formulario solo guarda en BD o también envía un email de aviso? (Depende del hosting/proveedor de correo.)
 
 ## 11.1 Notas técnicas
 

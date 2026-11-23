@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -73,6 +74,19 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddEntityFrameworkStores<PortfolioDbContext>();
+
+    /// <summary>
+    /// Stores the keys that sign/encrypt the auth cookie in SQL Server. Without this, keys live in the
+    /// container/app file system and every restart or redeploy would sign the admin out.
+    /// </summary>
+    public static IServiceCollection AddPersistentDataProtection(this IServiceCollection services)
+    {
+        services
+            .AddDataProtection()
+            .SetApplicationName("Portfolio")
+            .PersistKeysToDbContext<PortfolioDbContext>();
+        return services;
+    }
 
     /// <summary>Applies pending migrations; EF Core then runs the seeding callbacks.</summary>
     public static async Task MigrateDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)

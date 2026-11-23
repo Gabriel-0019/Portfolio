@@ -22,11 +22,45 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
 
     public string UploadsPath { get; } = Path.Combine(Path.GetTempPath(), $"portfolio-uploads-{Guid.NewGuid():N}");
 
-    private string ConnectionString =>
-        $"Server=(localdb)\\MSSQLLocalDB;Database={_databaseName};Trusted_Connection=True;TrustServerCertificate=True";
+    /// <summary>A stand-in for the built frontend (index.html with the head placeholder and an inline script).</summary>
+    public string SpaRoot { get; } = Path.Combine(Path.GetTempPath(), $"portfolio-spa-{Guid.NewGuid():N}");
+
+    public const string SpaInlineScript = "document.documentElement.dataset.boot = '1'";
+
+    /// <summary>
+    /// SQL Server to create the test database on. Defaults to LocalDB; CI sets PORTFOLIO_TEST_SQL
+    /// (e.g. "Server=localhost,1433;User Id=sa;Password=…;TrustServerCertificate=True") for a SQL Server container.
+    /// </summary>
+    private static string ServerConnection =>
+        Environment.GetEnvironmentVariable("PORTFOLIO_TEST_SQL") is { Length: > 0 } server
+            ? server.TrimEnd(';')
+            : "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+
+    private string ConnectionString => $"{ServerConnection};Database={_databaseName}";
+
+    public PortfolioApiFactory()
+    {
+        Directory.CreateDirectory(Path.Combine(SpaRoot, "assets"));
+        File.WriteAllText(
+            Path.Combine(SpaRoot, "index.html"),
+            $"""
+            <!doctype html>
+            <html lang="en">
+              <head>
+                <title>Portfolio</title>
+                <!--app-head-->
+                <script>{SpaInlineScript}</script>
+                <script type="module" src="/assets/app.js"></script>
+              </head>
+              <body><div id="root"></div></body>
+            </html>
+            """);
+        File.WriteAllText(Path.Combine(SpaRoot, "assets", "app.js"), "console.log('app')");
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting("Spa:RootPath", SpaRoot);
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Portfolio", ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
@@ -64,9 +98,12 @@ public sealed class PortfolioApiFactory : WebApplicationFactory<Program>, IAsync
     {
         await WithDbAsync(db => db.Database.EnsureDeletedAsync());
         await DisposeAsync();
-        if (Directory.Exists(UploadsPath))
+        foreach (var folder in new[] { UploadsPath, SpaRoot })
         {
-            Directory.Delete(UploadsPath, recursive: true);
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
         }
     }
 }

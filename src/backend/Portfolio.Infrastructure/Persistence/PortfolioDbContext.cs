@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -10,11 +11,14 @@ using Portfolio.Domain.Technologies;
 namespace Portfolio.Infrastructure.Persistence;
 
 /// <summary>
-/// Portfolio content plus ASP.NET Core Identity tables (AspNetUsers...) for the admin account.
+/// Portfolio content plus ASP.NET Core Identity tables (AspNetUsers...) for the admin account and the
+/// Data Protection keys (so sign-in cookies survive restarts, redeploys and multiple instances).
 /// </summary>
 public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> options)
-    : IdentityDbContext<IdentityUser>(options)
+    : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
 {
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectTranslation> ProjectTranslations => Set<ProjectTranslation>();
     public DbSet<ProjectImage> ProjectImages => Set<ProjectImage>();
