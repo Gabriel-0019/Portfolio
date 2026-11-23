@@ -129,10 +129,8 @@ uploads) and require the auth cookie from `POST /api/auth/login`. Full list in t
 Open http://localhost:5173/admin. On startup the API creates the admin account from
 `Admin:Email` / `Admin:Password` if it does not exist yet (it never changes an existing account).
 
-- **Development:** a local-only account is configured in
-  `src/backend/Portfolio.Api/appsettings.Development.json`. It only works against your local database.
-- **Your own credentials:** keep them out of the repo with user secrets, then delete the `Portfolio`
-  database's `AspNetUsers` row (or the whole local database) so the account is recreated:
+The credentials live only in **user secrets** (never in the repository). To create the account, or to
+replace it, set them and then delete the existing row from `AspNetUsers` so it is recreated on startup:
 
   ```bash
   dotnet user-secrets set "Admin:Email" "you@example.com" --project src/backend/Portfolio.Api

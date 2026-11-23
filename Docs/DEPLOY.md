@@ -16,7 +16,7 @@ dotnet publish src/backend/Portfolio.Api -c Release -o publish
 `publish` ejecuta `npm ci` + `npm run build` del frontend y copia `dist/` a `publish/wwwroot/`
 (usa `-p:BuildFrontend=false` si `dist/` ya está compilado). El paquete:
 
-- Incluye `appsettings.json` y **excluye** `appsettings.Development.json` (cuenta admin local de desarrollo).
+- Incluye `appsettings.json` y **excluye** `appsettings.Development.json` (solo ajustes de desarrollo).
 - Incluye `web.config` (por si el hosting usa IIS).
 - Es *framework-dependent*: el servidor necesita el runtime **ASP.NET Core 10**. Para un servidor Linux
   concreto se puede añadir `-r linux-x64 --self-contained false` y reducir el tamaño.
@@ -135,9 +135,8 @@ git push -u origin main
 El primer push ejecuta el CI (pruebas .NET con PostgreSQL en contenedor, lint y pruebas del frontend,
 pruebas e2e y de accesibilidad con Chromium) y genera el paquete `portfolio-site`.
 
-> Antes de publicar el repositorio (si será público): `appsettings.Development.json` contiene una
-> contraseña **solo de desarrollo** para la cuenta admin local. No da acceso a nada fuera de tu equipo, pero puedes
-> moverla a *user secrets* (ver README) si prefieres que no aparezca.
+> Ningún archivo del repositorio contiene contraseñas: en desarrollo, la cadena de conexión y la cuenta
+> admin están en *user secrets* (`secrets.json`); en producción, en las variables del hosting.
 
 ---
 
